@@ -584,7 +584,15 @@
   <!-- SCRIPT: CTA dinámico + tracking + reveal -->
   <script>
   (function () {
-    const WA_NUMBER = '5411';
+    // URL pública del repo secundario. Reemplazala cuando crees el repo.
+    // Ejemplo:
+    // https://cdn.jsdelivr.net/gh/TU_USUARIO_GITHUB/bet300-config@main/bet300-config.json
+    const CONFIG_URL = 'https://cdn.jsdelivr.net/gh/TU_USUARIO_GITHUB/bet300-config@main/bet300-config.json';
+
+    // Fallback por si el JSON externo no carga.
+    const DEFAULT_WA_NUMBER = '5411';
+
+    let waNumber = DEFAULT_WA_NUMBER;
 
     const phrases = [
       "Quiero crear mi usuario en Bet300 ✨",
@@ -607,8 +615,30 @@
 
     let currentIndex = Math.floor(Math.random() * phrases.length);
 
+    async function loadRemoteConfig() {
+      try {
+        const response = await fetch(CONFIG_URL, {
+          cache: 'no-store'
+        });
+
+        if (!response.ok) {
+          throw new Error('No se pudo cargar la config remota');
+        }
+
+        const config = await response.json();
+
+        if (config && typeof config.whatsapp_number === 'string' && config.whatsapp_number.trim()) {
+          waNumber = config.whatsapp_number.replace(/\D/g, '');
+        }
+      } catch (error) {
+        console.warn('Usando número fallback:', error);
+      } finally {
+        updateCTAs(currentIndex);
+      }
+    }
+
     function buildWhatsAppHref(phrase) {
-      const base = 'https://wa.me/' + WA_NUMBER;
+      const base = 'https://wa.me/' + waNumber;
       const message = `¡Hola! Quiero más información sobre Bet300. (${phrase})`;
       return base + '?text=' + encodeURIComponent(message);
     }
@@ -697,7 +727,9 @@
       });
     }
 
+    // Dejo algo funcional desde el primer render.
     updateCTAs(currentIndex);
+    loadRemoteConfig();
 
     setInterval(() => {
       currentIndex = (currentIndex + 1) % phrases.length;
